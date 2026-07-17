@@ -10,6 +10,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Route de test pour la racine
+app.get('/', (req, res) => {
+  res.json({ status: 'success', message: 'MACIES API is running on Vercel!' });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/requests', requestRoutes);
 
