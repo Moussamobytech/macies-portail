@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: macies-backend
+    env: node
+    region: frankfurt # Optionnel, pour héberger au plus proche de l'Afrique
+    buildCommand: npm install && npm run build
+    startCommand: npx prisma migrate deploy && npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
