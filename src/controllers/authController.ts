@@ -8,7 +8,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, phone, password } = req.body;
+    const { name, email, phone, password, role } = req.body;
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       res.status(400).json({ error: 'Email déjà utilisé' });
@@ -17,7 +17,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { name, email, phone, password: hashedPassword }
+      data: { name, email, phone, password: hashedPassword, role: role || 'CLIENT' }
     });
 
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
