@@ -1,10 +1,14 @@
 import type { Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import type { AuthRequest } from '../middleware/auth';
-import { put } from '@vercel/blob';
+import { handleUpload } from '@vercel/blob/client';
 import { sendWhatsAppMessage } from '../services/whatsappService';
 
 const prisma = new PrismaClient();
+
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
 export const getClientRequests = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -18,24 +22,42 @@ export const getClientRequests = async (req: AuthRequest, res: Response): Promis
   }
 };
 
+export const generateUploadToken = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const jsonResponse = await handleUpload({
+      body: req.body,
+      request: req,
+      onBeforeGenerateToken: async (pathname, clientPayload) => {
+        if (!clientPayload) throw new Error("Non autorisé");
+        
+        try {
+          jwt.verify(clientPayload, JWT_SECRET);
+        } catch {
+          throw new Error("Token invalide");
+        }
+
+        return {
+          allowedContentTypes: ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip', 'application/x-zip-compressed'],
+          maximumSizeInBytes: 50 * 1024 * 1024, // 50MB
+        };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        console.log('Upload completed:', blob.url);
+      },
+    });
+
+    res.status(200).json(jsonResponse);
+  } catch (error) {
+    res.status(400).json({ error: (error as Error).message });
+  }
+};
+
 export const createRequest = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { type, description } = req.body;
-    let fileUrls: string[] = [];
-
-    if (req.files && Array.isArray(req.files)) {
-      for (const file of req.files) {
-        const blob = await put(file.originalname, file.buffer, {
-          access: 'public',
-        });
-        fileUrls.push(blob.url);
-      }
-    }
-
-    const fileUrl = fileUrls.length > 0 ? fileUrls.join(',') : null;
+    const { type, description, fileUrl } = req.body;
 
     const request = await prisma.serviceRequest.create({
-      data: { type, description, userId: req.user!.id, fileUrl },
+      data: { type, description, userId: req.user!.id, fileUrl: fileUrl || null },
       include: { user: true }
     });
 
@@ -49,7 +71,7 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
 
     res.status(201).json(request);
   } catch (error) {
-    console.error("Vercel Blob Error:", error);
+    console.error("Create Request Error:", error);
     res.status(500).json({ error: 'Erreur lors de la création de la demande' });
   }
 };
@@ -90,17 +112,10 @@ export const updateRequestStatus = async (req: AuthRequest, res: Response): Prom
 
 export const deliverRequest = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    let deliverableUrl = null;
-
-    if (req.file) {
-      const blob = await put(req.file.originalname, req.file.buffer, {
-        access: 'public',
-      });
-      deliverableUrl = blob.url;
-    }
+    const { deliverableUrl } = req.body;
 
     if (!deliverableUrl) {
-      res.status(400).json({ error: 'Fichier manquant' });
+      res.status(400).json({ error: 'Lien du livrable manquant' });
       return;
     }
 
