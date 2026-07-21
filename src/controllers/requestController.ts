@@ -104,6 +104,15 @@ export const updateRequestStatus = async (req: AuthRequest, res: Response): Prom
       );
     }
 
+    // Enregistrement du log
+    await prisma.activityLog.create({
+      data: {
+        action: 'STATUS_UPDATE',
+        details: `Modification du statut de la demande #MAC-${request.id.substring(0, 4).toUpperCase()} à ${status}`,
+        userId: req.user!.id
+      }
+    });
+
     res.json(request);
   } catch (error) {
     res.status(500).json({ error: 'Erreur serveur' });
@@ -131,6 +140,15 @@ export const deliverRequest = async (req: AuthRequest, res: Response): Promise<v
         `MACIES ENTERPRISE : Excellente nouvelle ! Le livrable pour votre demande "${request.type}" est prêt. Connectez-vous à votre espace client pour le télécharger.`
       );
     }
+
+    // Enregistrement du log
+    await prisma.activityLog.create({
+      data: {
+        action: 'DELIVERY',
+        details: `Livraison effectuée pour la demande #MAC-${request.id.substring(0, 4).toUpperCase()}`,
+        userId: req.user!.id
+      }
+    });
 
     res.json(request);
   } catch (error) {

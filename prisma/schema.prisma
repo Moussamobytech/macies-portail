@@ -18,6 +18,7 @@ model User {
   requests      ServiceRequest[]
   orders        Order[]
   notifications Notification[]
+  activityLogs  ActivityLog[]
 }
 
 model ServiceRequest {
@@ -48,6 +49,15 @@ model Notification {
   title     String
   message   String
   isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  action    String   // e.g. "STATUS_UPDATE", "DELIVERY", "SYSTEM"
+  details   String   // The description of what happened
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
   userId    String

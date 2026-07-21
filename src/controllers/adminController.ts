@@ -49,3 +49,18 @@ export const getAdminClients = async (req: AuthRequest, res: Response): Promise<
     res.status(500).json({ error: 'Erreur serveur lors du chargement des clients' });
   }
 };
+
+export const getAdminLogs = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const logs = await prisma.activityLog.findMany({
+      include: {
+        user: { select: { name: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur lors du chargement des logs' });
+  }
+};
