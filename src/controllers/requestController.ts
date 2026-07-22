@@ -61,6 +61,18 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
       include: { user: true }
     });
 
+    // Notify Admins
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+    for (const admin of admins) {
+      await prisma.notification.create({
+        data: {
+          title: 'Nouvelle demande client',
+          message: `${request.user.name} a soumis une demande : ${type}`,
+          userId: admin.id
+        }
+      });
+    }
+
     // Envoi notification WhatsApp
     if (request.user.phone) {
       await sendWhatsAppMessage(
@@ -106,6 +118,15 @@ export const updateRequestStatus = async (req: AuthRequest, res: Response): Prom
       include: { user: true }
     });
 
+    // Notify Client
+    await prisma.notification.create({
+      data: {
+        title: 'Mise à jour de votre demande',
+        message: `Le statut de votre demande "${request.type}" est passé à : ${status}`,
+        userId: request.userId
+      }
+    });
+
     if (request.user.phone) {
       await sendWhatsAppMessage(
         request.user.phone, 
@@ -141,6 +162,15 @@ export const deliverRequest = async (req: AuthRequest, res: Response): Promise<v
       where: { id: req.params.id as string },
       data: { status: 'DELIVERED', deliverableUrl },
       include: { user: true }
+    });
+
+    // Notify Client
+    await prisma.notification.create({
+      data: {
+        title: 'Demande Livrée',
+        message: `Votre demande "${request.type}" est prête. Vous pouvez télécharger le livrable.`,
+        userId: request.userId
+      }
     });
 
     if (request.user.phone) {
