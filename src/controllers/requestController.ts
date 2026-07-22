@@ -24,6 +24,10 @@ export const getClientRequests = async (req: AuthRequest, res: Response): Promis
 
 export const generateUploadToken = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      throw new Error("Vercel Blob Storage n'est pas configuré. Veuillez créer un Blob Store dans votre projet Vercel (onglet Storage).");
+    }
+
     const jsonResponse = await handleUpload({
       body: req.body,
       request: req,
