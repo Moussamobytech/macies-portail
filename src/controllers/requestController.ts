@@ -69,6 +69,15 @@ export const createRequest = async (req: AuthRequest, res: Response): Promise<vo
       );
     }
 
+    // Enregistrement du log
+    await prisma.activityLog.create({
+      data: {
+        action: 'SYSTEM',
+        details: `Nouvelle demande de service soumise : "${type}"`,
+        userId: req.user!.id
+      }
+    });
+
     res.status(201).json(request);
   } catch (error) {
     console.error("Create Request Error:", error);
