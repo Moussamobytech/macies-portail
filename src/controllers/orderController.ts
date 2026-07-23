@@ -88,13 +88,13 @@ export const getAllOrders = async (req: any, res: Response): Promise<void> => {
 export const deliverOrder = async (req: any, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const { paymentStatus } = req.body || {};
     
-    // Mettre à jour le statut du paiement ou l'état de livraison
-    // Ici on suppose qu'on change un état. Dans Prisma Schema actuel, il n'y a que paymentStatus pour Order
-    // Mais on peut utiliser Notification pour informer le client
+    const newStatus = paymentStatus || 'PAID';
+
     const order = await prisma.order.update({
       where: { id },
-      data: { paymentStatus: 'PAID' }, // Ou 'DELIVERED' si on l'ajoute au schéma, utilisons PAID pour l'exemple
+      data: { paymentStatus: newStatus },
       include: { user: true }
     });
 
