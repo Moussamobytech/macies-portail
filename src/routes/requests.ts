@@ -14,14 +14,16 @@ import {
 
 const router = Router();
 
+// Static routes
+router.get('/all', authenticateToken, requireAdmin, getAllRequests);
 router.get('/', authenticateToken, getClientRequests);
-router.get('/:id', authenticateToken, getRequestById);
-router.get('/:id/messages', authenticateToken, getMessages);
-router.post('/:id/messages', authenticateToken, sendMessage);
 router.post('/', authenticateToken, createRequest);
 router.post('/upload-token', generateUploadToken);
 
-router.get('/all', authenticateToken, requireAdmin, getAllRequests);
+// Dynamic routes
+router.get('/:id', authenticateToken, getRequestById);
+router.get('/:id/messages', authenticateToken, getMessages);
+router.post('/:id/messages', authenticateToken, sendMessage);
 router.patch('/:id', authenticateToken, requireAdmin, updateRequestStatus);
 router.post('/:id/deliver', authenticateToken, requireAdmin, deliverRequest);
 
