@@ -224,3 +224,101 @@ export const getRequestById = async (req: AuthRequest, res: Response): Promise<v
     res.status(500).json({ error: 'Erreur lors de la récupération de la demande' });
   }
 };
+
+export const getMessages = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    
+    const request = await prisma.serviceRequest.findUnique({ where: { id } });
+    if (!request) {
+      res.status(404).json({ error: 'Demande non trouvée' });
+      return;
+    }
+
+    if (req.user!.role !== 'ADMIN' && request.userId !== req.user!.id) {
+      res.status(403).json({ error: 'Accès non autorisé' });
+      return;
+    }
+
+    const messages = await prisma.message.findMany({
+      where: { serviceRequestId: id },
+      include: { sender: { select: { name: true, role: true } } },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la récupération des messages' });
+  }
+};
+
+export const sendMessage = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+
+    if (!content?.trim()) {
+      res.status(400).json({ error: 'Le message ne peut pas être vide' });
+      return;
+    }
+
+    const request = await prisma.serviceRequest.findUnique({
+      where: { id },
+      include: { user: true }
+    });
+
+    if (!request) {
+      res.status(404).json({ error: 'Demande non trouvée' });
+      return;
+    }
+
+    if (req.user!.role !== 'ADMIN' && request.userId !== req.user!.id) {
+      res.status(403).json({ error: 'Accès non autorisé' });
+      return;
+    }
+
+    const message = await prisma.message.create({
+      data: {
+        content,
+        serviceRequestId: id,
+        senderId: req.user!.id
+      },
+      include: { sender: { select: { name: true, role: true } } }
+    });
+
+    // Notify the other party
+    const isClientSending = req.user!.role !== 'ADMIN';
+    
+    if (isClientSending) {
+      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } });
+      for (const admin of admins) {
+        await prisma.notification.create({
+          data: {
+            title: 'Nouveau message reçu',
+            message: `${req.user!.name} a envoyé un message sur la demande "${request.type}"`,
+            userId: admin.id
+          }
+        });
+      }
+    } else {
+      await prisma.notification.create({
+        data: {
+          title: 'Nouveau message de MACIES',
+          message: `L'administrateur a répondu à votre demande "${request.type}"`,
+          userId: request.userId
+        }
+      });
+      // Optionally notify via WhatsApp
+      if (request.user.phone) {
+        await sendWhatsAppMessage(
+          request.user.phone, 
+          `MACIES ENTERPRISE : Vous avez reçu un nouveau message sur votre demande "${request.type}". Connectez-vous pour répondre.`
+        );
+      }
+    }
+
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de l'envoi du message" });
+  }
+};

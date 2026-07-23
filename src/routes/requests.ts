@@ -7,13 +7,17 @@ import {
   updateRequestStatus, 
   deliverRequest,
   generateUploadToken,
-  getRequestById
+  getRequestById,
+  getMessages,
+  sendMessage
 } from '../controllers/requestController';
 
 const router = Router();
 
 router.get('/', authenticateToken, getClientRequests);
 router.get('/:id', authenticateToken, getRequestById);
+router.get('/:id/messages', authenticateToken, getMessages);
+router.post('/:id/messages', authenticateToken, sendMessage);
 router.post('/', authenticateToken, createRequest);
 router.post('/upload-token', generateUploadToken);
 
