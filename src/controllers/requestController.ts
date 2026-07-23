@@ -199,3 +199,28 @@ export const deliverRequest = async (req: AuthRequest, res: Response): Promise<v
     res.status(500).json({ error: 'Erreur lors de la livraison' });
   }
 };
+
+export const getRequestById = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const request = await prisma.serviceRequest.findUnique({
+      where: { id },
+      include: { user: { select: { name: true, email: true, phone: true } } }
+    });
+
+    if (!request) {
+      res.status(404).json({ error: 'Demande non trouvée' });
+      return;
+    }
+
+    // Un client ne peut voir que ses propres demandes (sauf s'il est admin)
+    if (req.user!.role !== 'ADMIN' && request.userId !== req.user!.id) {
+      res.status(403).json({ error: 'Accès non autorisé' });
+      return;
+    }
+
+    res.json(request);
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur lors de la récupération de la demande' });
+  }
+};

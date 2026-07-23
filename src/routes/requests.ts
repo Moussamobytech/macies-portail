@@ -6,12 +6,14 @@ import {
   getAllRequests, 
   updateRequestStatus, 
   deliverRequest,
-  generateUploadToken
+  generateUploadToken,
+  getRequestById
 } from '../controllers/requestController';
 
 const router = Router();
 
 router.get('/', authenticateToken, getClientRequests);
+router.get('/:id', authenticateToken, getRequestById);
 router.post('/', authenticateToken, createRequest);
 router.post('/upload-token', generateUploadToken);
 
